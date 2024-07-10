@@ -74,7 +74,12 @@ private:
         else if (position < input.size() && input[position] == '(') {
             ++position;
             double result = parseExpression();
-            ++position;
+            if (position < input.size() && input[position] == ')') {
+                ++position;
+            }
+            else {
+                throw std::runtime_error("Wrong order of parentheses");
+            }
             return result;
         }
         else {
@@ -95,14 +100,24 @@ private:
         while (position < input.size() && std::isalpha(input[position])) {
             functionName += input[position++];
         }
-        ++position;
-        std::vector<double> args;
-        while (position < input.size() && input[position] != ')') {
-            args.push_back(parseExpression());
-            if (input[position] == ',') ++position;
+        if (position < input.size() && input[position] == '(') {
+            ++position;
+            std::vector<double> args;
+            while (position < input.size() && input[position] != ')') {
+                args.push_back(parseExpression());
+                if (input[position] == ',') ++position;
+            }
+            if (position < input.size() && input[position] == ')') {
+                ++position;
+            }
+            else {
+                throw std::runtime_error("Wrong order of parentheses");
+            }
+            return functions[functionName](args);
         }
-        ++position;
-        return functions[functionName](args);
+        else {
+            throw std::runtime_error("Wrong function call");
+        }
     }
 
     double evaluateWithLocalVariables(const std::string& expression, const std::map<std::string, double>& localVariables) {
