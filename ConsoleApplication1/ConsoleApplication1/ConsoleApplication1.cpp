@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <vector>
 #include <sstream>
+#include <cmath>
 
 class Interpreter {
 public:
@@ -14,6 +15,10 @@ public:
         functions["sub"] = [](const std::vector<double>& args) { return args[0] - args[1]; };
         functions["mul"] = [](const std::vector<double>& args) { return args[0] * args[1]; };
         functions["div"] = [](const std::vector<double>& args) { return args[0] / args[1]; };
+        functions["pow"] = [](const std::vector<double>& args) { return std::pow(args[0], args[1]); };
+        functions["abs"] = [](const std::vector<double>& args) { return std::abs(args[0]); };
+        functions["max"] = [](const std::vector<double>& args) { return std::max(args[0], args[1]); };
+        functions["min"] = [](const std::vector<double>& args) { return std::min(args[0], args[1]); };
     }
 
     double evaluate(const std::string& expression) {
