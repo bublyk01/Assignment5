@@ -26,10 +26,23 @@ public:
         return parseExpression();
     }
 
+    void defineFunction(const std::string& name, const std::string& param1, const std::string& param2, const std::string& expr) {
+        customFunctions[name] = [this, param1, param2, expr](const std::vector<double>& args) {
+            localVariables[param1] = args[0];
+            localVariables[param2] = args[1];
+            double result = evaluateWithLocalVariables(expr);
+            localVariables.erase(param1);
+            localVariables.erase(param2);
+            return result;
+            };
+    }
+
 private:
     size_t position;
     std::string input;
     std::map<std::string, std::function<double(const std::vector<double>&)>> functions;
+    std::map<std::string, std::function<double(const std::vector<double>&)>> customFunctions;
+    std::map<std::string, double> localVariables;
 
     double parseExpression() {
         double result = parseTerm();
@@ -62,7 +75,16 @@ private:
             return parseNumber();
         }
         else if (position < input.size() && std::isalpha(input[position])) {
-            return parseFunctionCall();
+            std::string name;
+            while (position < input.size() && std::isalpha(input[position])) {
+                name += input[position++];
+            }
+            if (localVariables.find(name) != localVariables.end()) {
+                return localVariables[name];
+            }
+            else {
+                return parseFunctionCall(name);
+            }
         }
         else if (position < input.size() && input[position] == '(') {
             ++position;
@@ -88,17 +110,13 @@ private:
         return std::stod(number);
     }
 
-    double parseFunctionCall() {
-        std::string functionName;
-        while (position < input.size() && std::isalpha(input[position])) {
-            functionName += input[position++];
-        }
+    double parseFunctionCall(const std::string& functionName) {
         if (position < input.size() && input[position] == '(') {
             ++position;
             std::vector<double> args;
             while (position < input.size() && input[position] != ')') {
                 args.push_back(parseExpression());
-                if (input[position] == ',') ++position;
+                if (position < input.size() && input[position] == ',') ++position;
             }
             if (position < input.size() && input[position] == ')') {
                 ++position;
@@ -109,6 +127,12 @@ private:
             if (functions.find(functionName) != functions.end()) {
                 return functions[functionName](args);
             }
+            else if (customFunctions.find(functionName) != customFunctions.end()) {
+                if (args.size() != 2) {
+                    throw std::runtime_error("These functions need 2 arguments");
+                }
+                return customFunctions[functionName](args);
+            }
             else {
                 throw std::runtime_error("Unknown function: " + functionName);
             }
@@ -117,10 +141,31 @@ private:
             throw std::runtime_error("Wrong function call");
         }
     }
+
+    double evaluateWithLocalVariables(const std::string& expression) {
+        size_t savedPosition = position;
+        std::string savedInput = input;
+        auto savedLocalVariables = localVariables;
+
+        input = expression;
+        position = 0;
+
+        double result = parseExpression();
+
+        input = savedInput;
+        position = savedPosition;
+        localVariables = savedLocalVariables;
+
+        return result;
+    }
 };
 
 int main() {
     Interpreter interpreter;
+    interpreter.defineFunction("Add", "x", "y", "x+y");
+    interpreter.defineFunction("Subtract", "x", "y", "x-y");
+    interpreter.defineFunction("Multiply", "x", "y", "x*y");
+    interpreter.defineFunction("Divide", "x", "y", "x/y");
 
     std::string expression;
 
