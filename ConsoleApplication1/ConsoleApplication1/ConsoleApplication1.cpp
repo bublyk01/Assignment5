@@ -23,7 +23,7 @@ public:
     double evaluate(const std::string& expression) {
         position = 0;
         input = expression;
-        return parseExpression();
+        return parseStatement();
     }
 
     void defineFunction(const std::string& name, const std::string& param1, const std::string& param2, const std::string& expr) {
@@ -43,6 +43,33 @@ private:
     std::map<std::string, std::function<double(const std::vector<double>&)>> functions;
     std::map<std::string, std::function<double(const std::vector<double>&)>> customFunctions;
     std::map<std::string, double> localVariables;
+    std::map<std::string, double> globalVariables;
+
+    double parseStatement() {
+        skipWhitespace();
+        if (input.substr(position, 4) == "var ") {
+            position += 4;
+            return parseAssignment();
+        }
+        return parseExpression();
+    }
+
+    double parseAssignment() {
+        std::string varName;
+        while (position < input.size() && std::isalpha(input[position])) {
+            varName += input[position++];
+        }
+        skipWhitespace();
+        if (input[position] == '=') {
+            ++position;
+            double value = parseExpression();
+            globalVariables[varName] = value;
+            return value;
+        }
+        else {
+            throw std::runtime_error("Expected '=' in assignment");
+        }
+    }
 
     double parseExpression() {
         double result = parseTerm();
@@ -81,6 +108,9 @@ private:
             }
             if (localVariables.find(name) != localVariables.end()) {
                 return localVariables[name];
+            }
+            else if (globalVariables.find(name) != globalVariables.end()) {
+                return globalVariables[name];
             }
             else {
                 return parseFunctionCall(name);
@@ -139,6 +169,12 @@ private:
         }
         else {
             throw std::runtime_error("Wrong function call");
+        }
+    }
+
+    void skipWhitespace() {
+        while (position < input.size() && std::isspace(input[position])) {
+            ++position;
         }
     }
 
