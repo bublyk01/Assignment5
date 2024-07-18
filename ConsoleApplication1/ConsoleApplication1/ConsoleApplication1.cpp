@@ -5,7 +5,6 @@
 #include <functional>
 #include <stdexcept>
 #include <vector>
-#include <sstream>
 #include <cmath>
 
 class Interpreter {
@@ -25,16 +24,6 @@ public:
         position = 0;
         input = expression;
         return parseExpression();
-    }
-
-    void defineFunction(const std::string& name, const std::vector<std::string>& params, const std::string& body) {
-        functions[name] = [this, params, body](const std::vector<double>& args) {
-            std::map<std::string, double> localVariables;
-            for (size_t i = 0; i < params.size(); ++i) {
-                localVariables[params[i]] = args[i];
-            }
-            return evaluateWithLocalVariables(body, localVariables);
-            };
     }
 
 private:
@@ -65,6 +54,10 @@ private:
     }
 
     double parseFactor() {
+        if (position < input.size() && input[position] == '-') {
+            ++position;
+            return -parseFactor();
+        }
         if (position < input.size() && std::isdigit(input[position])) {
             return parseNumber();
         }
@@ -113,27 +106,21 @@ private:
             else {
                 throw std::runtime_error("Wrong order of parentheses");
             }
-            return functions[functionName](args);
+            if (functions.find(functionName) != functions.end()) {
+                return functions[functionName](args);
+            }
+            else {
+                throw std::runtime_error("Unknown function: " + functionName);
+            }
         }
         else {
             throw std::runtime_error("Wrong function call");
         }
     }
-
-    double evaluateWithLocalVariables(const std::string& expression, const std::map<std::string, double>& localVariables) {
-        position = 0;
-        input = expression;
-        this->localVariables = localVariables;
-        return parseExpression();
-    }
-
-    std::map<std::string, double> localVariables;
 };
 
 int main() {
     Interpreter interpreter;
-    interpreter.defineFunction("square", { "x" }, "x * x");
-    interpreter.defineFunction("sum_of_squares", { "a", "b" }, "square(a) + square(b)");
 
     std::string expression;
 
